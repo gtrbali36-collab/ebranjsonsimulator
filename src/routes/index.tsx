@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ResultTable, type Row } from "@/components/ResultTable";
-import { supabase } from "@/integrations/supabase/client";
+import { createDataset, insertDatasetItems, saveReport } from "@/lib/data.functions";
 import { fetchRemoteJson } from "@/lib/remote-json.functions";
 import {
   analyzeJson,
@@ -139,40 +139,40 @@ function Dashboard() {
     setSelectedFields([]);
     setResult(null);
 
-    const { data: dataset, error } = await supabase
-      .from("datasets")
-      .insert({
-        name: sourceName,
-        source_type: sourceType,
-        source_url: sourceUrl,
-        tanggal: analysis.tanggal,
-        total_items: analysis.itemCount,
-        categories: analysis.categories,
-        fields: analysis.fields,
-        meta: { rootKeys: analysis.rootKeys, itemsPath: analysis.itemsPath, total: analysis.total },
-      })
-      .select("id")
-      .single();
-
-    if (error || !dataset) {
+    let datasetId: string;
+    try {
+      const created = await createDataset({
+        data: {
+          name: sourceName,
+          source_type: sourceType === "url" ? "url" : "file",
+          source_url: sourceUrl,
+          tanggal: analysis.tanggal,
+          total_items: analysis.itemCount,
+          categories: analysis.categories,
+          fields: analysis.fields,
+          meta: { rootKeys: analysis.rootKeys, itemsPath: analysis.itemsPath, total: analysis.total },
+        },
+      });
+      datasetId = created.id;
+    } catch {
       toast.error("Pemetaan berhasil, tapi gagal menyimpan ke database.");
       return;
     }
 
     const key = categoryKeyOf(items);
     const payload = items.map((item) => ({
-      dataset_id: dataset.id,
       kategori: key ? String(item[key] ?? "") : null,
-      data: item as never,
+      data: item,
     }));
     for (let i = 0; i < payload.length; i += 400) {
-      const { error: insErr } = await supabase.from("dataset_items").insert(payload.slice(i, i + 400));
-      if (insErr) {
+      try {
+        await insertDatasetItems({ data: { dataset_id: datasetId, items: payload.slice(i, i + 400) } });
+      } catch {
         toast.error("Sebagian item gagal disimpan ke database.");
         break;
       }
     }
-    setStage({ analysis, items, datasetId: dataset.id, sourceName });
+    setStage({ analysis, items, datasetId, sourceName });
     toast.success(`Berhasil membaca ${items.length.toLocaleString("id-ID")} item & menyimpan ke database.`);
   }
 
@@ -224,18 +224,24 @@ function Dashboard() {
   async function saveResult() {
     if (!stage || !result) return;
     setSaving(true);
-    const { error } = await supabase.from("saved_reports").insert({
-      dataset_id: stage.datasetId,
-      name: `${stage.sourceName} — ${result.cats.join(", ").slice(0, 80)}`,
-      tanggal: stage.analysis.tanggal,
-      categories: result.cats,
-      fields: result.fields,
-      row_count: result.rows.length,
-      rows: result.rows as never,
-    });
-    setSaving(false);
-    if (error) toast.error("Gagal menyimpan hasil.");
-    else toast.success("Hasil tersimpan. Lihat di halaman Data Tersimpan.");
+    try {
+      await saveReport({
+        data: {
+          dataset_id: stage.datasetId,
+          name: `${stage.sourceName} — ${result.cats.join(", ").slice(0, 80)}`,
+          tanggal: stage.analysis.tanggal,
+          categories: result.cats,
+          fields: result.fields,
+          row_count: result.rows.length,
+          rows: result.rows,
+        },
+      });
+      toast.success("Hasil tersimpan. Lihat di halaman Data Tersimpan.");
+    } catch {
+      toast.error("Gagal menyimpan hasil.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const analysis = stage?.analysis;

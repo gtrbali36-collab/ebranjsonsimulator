@@ -7,7 +7,7 @@ import { Calendar, Database, Layers, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ResultTable, type Row } from "@/components/ResultTable";
-import { supabase } from "@/integrations/supabase/client";
+import { deleteReport, listReports } from "@/lib/data.functions";
 
 export const Route = createFileRoute("/tersimpan")({
   head: () => ({
@@ -44,19 +44,13 @@ function SavedPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["saved_reports"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("saved_reports")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as Report[];
-    },
+    queryFn: async () => (await listReports()) as unknown as Report[],
   });
 
   async function remove(id: string) {
-    const { error } = await supabase.from("saved_reports").delete().eq("id", id);
-    if (error) {
+    try {
+      await deleteReport({ data: { id } });
+    } catch {
       toast.error("Gagal menghapus data.");
       return;
     }
