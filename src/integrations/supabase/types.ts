@@ -14,7 +14,121 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      dataset_items: {
+        Row: {
+          created_at: string
+          data: Json
+          dataset_id: string
+          id: string
+          kategori: string | null
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          dataset_id: string
+          id?: string
+          kategori?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          dataset_id?: string
+          id?: string
+          kategori?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dataset_items_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      datasets: {
+        Row: {
+          categories: Json
+          created_at: string
+          fields: Json
+          id: string
+          meta: Json
+          name: string
+          source_type: string
+          source_url: string | null
+          tanggal: string | null
+          total_items: number
+        }
+        Insert: {
+          categories?: Json
+          created_at?: string
+          fields?: Json
+          id?: string
+          meta?: Json
+          name: string
+          source_type?: string
+          source_url?: string | null
+          tanggal?: string | null
+          total_items?: number
+        }
+        Update: {
+          categories?: Json
+          created_at?: string
+          fields?: Json
+          id?: string
+          meta?: Json
+          name?: string
+          source_type?: string
+          source_url?: string | null
+          tanggal?: string | null
+          total_items?: number
+        }
+        Relationships: []
+      }
+      saved_reports: {
+        Row: {
+          categories: Json
+          created_at: string
+          dataset_id: string | null
+          fields: Json
+          id: string
+          name: string
+          row_count: number
+          rows: Json
+          tanggal: string | null
+        }
+        Insert: {
+          categories?: Json
+          created_at?: string
+          dataset_id?: string | null
+          fields?: Json
+          id?: string
+          name: string
+          row_count?: number
+          rows?: Json
+          tanggal?: string | null
+        }
+        Update: {
+          categories?: Json
+          created_at?: string
+          dataset_id?: string | null
+          fields?: Json
+          id?: string
+          name?: string
+          row_count?: number
+          rows?: Json
+          tanggal?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_reports_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
