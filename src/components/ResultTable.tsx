@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCell } from "@/lib/analyze";
+import { columnMinPx, columnPercents } from "@/lib/column-width";
 
 export type Row = Record<string, unknown>;
 
