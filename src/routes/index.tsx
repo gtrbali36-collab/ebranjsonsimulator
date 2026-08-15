@@ -224,18 +224,24 @@ function Dashboard() {
   async function saveResult() {
     if (!stage || !result) return;
     setSaving(true);
-    const { error } = await supabase.from("saved_reports").insert({
-      dataset_id: stage.datasetId,
-      name: `${stage.sourceName} — ${result.cats.join(", ").slice(0, 80)}`,
-      tanggal: stage.analysis.tanggal,
-      categories: result.cats,
-      fields: result.fields,
-      row_count: result.rows.length,
-      rows: result.rows as never,
-    });
-    setSaving(false);
-    if (error) toast.error("Gagal menyimpan hasil.");
-    else toast.success("Hasil tersimpan. Lihat di halaman Data Tersimpan.");
+    try {
+      await saveReport({
+        data: {
+          dataset_id: stage.datasetId,
+          name: `${stage.sourceName} — ${result.cats.join(", ").slice(0, 80)}`,
+          tanggal: stage.analysis.tanggal,
+          categories: result.cats,
+          fields: result.fields,
+          row_count: result.rows.length,
+          rows: result.rows,
+        },
+      });
+      toast.success("Hasil tersimpan. Lihat di halaman Data Tersimpan.");
+    } catch {
+      toast.error("Gagal menyimpan hasil.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const analysis = stage?.analysis;
