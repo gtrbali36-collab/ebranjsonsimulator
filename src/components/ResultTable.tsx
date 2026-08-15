@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCell } from "@/lib/analyze";
+import { columnMinPx, columnPercents } from "@/lib/column-width";
 
 export type Row = Record<string, unknown>;
 
@@ -36,6 +37,12 @@ export function ResultTable({
       fields.some((f) => formatCell(row[f]).toLowerCase().includes(q)),
     );
   }, [rows, fields, query]);
+
+  const percents = useMemo(() => columnPercents(fields), [fields]);
+  const tableMinWidth = useMemo(
+    () => 48 + fields.reduce((sum, f) => sum + columnMinPx(f), 0),
+    [fields],
+  );
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
@@ -63,12 +70,18 @@ export function ResultTable({
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
-        <Table>
+        <Table className="w-full table-fixed" style={{ minWidth: `${tableMinWidth}px` }}>
+          <colgroup>
+            <col style={{ width: "3rem" }} />
+            {fields.map((f, i) => (
+              <col key={f} style={{ width: `${percents[i]}%` }} />
+            ))}
+          </colgroup>
           <TableHeader>
             <TableRow className="bg-secondary/70">
-              <TableHead className="w-12 text-xs">#</TableHead>
+              <TableHead className="text-xs">#</TableHead>
               {fields.map((f) => (
-                <TableHead key={f} className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide">
+                <TableHead key={f} className="truncate text-xs font-semibold uppercase tracking-wide">
                   {f}
                 </TableHead>
               ))}
@@ -91,18 +104,24 @@ export function ResultTable({
                     const value = formatCell(row[f]);
                     const isUrl = /^https?:\/\//.test(value);
                     return (
-                      <TableCell key={f} className="max-w-[26rem] text-sm">
+                      <TableCell key={f} className="text-sm">
                         {isUrl ? (
                           <a
                             href={value}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-primary underline underline-offset-2 break-all"
+                            title={value}
+                            className="block truncate text-primary underline underline-offset-2"
                           >
-                            {value.length > 60 ? `${value.slice(0, 60)}…` : value}
+                            {value}
                           </a>
                         ) : (
-                          <span className="line-clamp-4 whitespace-pre-wrap break-words">{value}</span>
+                          <span
+                            title={value}
+                            className="line-clamp-4 whitespace-pre-wrap [overflow-wrap:anywhere]"
+                          >
+                            {value}
+                          </span>
                         )}
                       </TableCell>
                     );
@@ -113,6 +132,7 @@ export function ResultTable({
           </TableBody>
         </Table>
       </div>
+
 
       {pageCount > 1 && (
         <div className="flex items-center justify-end gap-2">

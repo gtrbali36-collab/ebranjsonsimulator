@@ -1,3 +1,5 @@
+import { columnPercents } from "@/lib/column-width";
+
 export type ExportRow = Record<string, unknown>;
 
 export type ExportFormat =
@@ -135,7 +137,9 @@ export async function exportReport(payload: ExportPayload, format: ExportFormat)
     const XLSX = await import("xlsx");
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(toMatrix(payload));
-    ws["!cols"] = payload.fields.map(() => ({ wch: 28 }));
+    ws["!cols"] = columnPercents(payload.fields).map((p) => ({
+      wch: Math.max(10, Math.min(70, Math.round(p * 1.6))),
+    }));
     XLSX.utils.book_append_sheet(wb, ws, "Data");
     const info = XLSX.utils.json_to_sheet(
       Object.entries(meta(payload)).map(([key, value]) => ({
@@ -155,6 +159,8 @@ export async function exportReport(payload: ExportPayload, format: ExportFormat)
   }
 
   if (format === "html") {
+    const pcts = columnPercents(payload.fields);
+    const cols = pcts.map((p) => `<col style="width:${p.toFixed(2)}%">`).join("");
     const head = payload.fields.map((f) => `<th>${escapeHtml(f)}</th>`).join("");
     const body = payload.rows
       .map(
@@ -170,17 +176,19 @@ export async function exportReport(payload: ExportPayload, format: ExportFormat)
 body{font-family:system-ui,sans-serif;margin:24px;color:#14213d}
 h1{font-size:20px;margin:0 0 4px}
 p.meta{color:#5b6478;font-size:13px;margin:0 0 16px}
-table{border-collapse:collapse;width:100%;font-size:13px}
-th,td{border:1px solid #d9dee8;padding:6px 8px;text-align:left;vertical-align:top}
-th{background:#f2f5f9}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:1100px;table-layout:fixed;font-size:13px}
+th,td{border:1px solid #d9dee8;padding:6px 8px;text-align:left;vertical-align:top;overflow-wrap:anywhere;word-break:normal}
+th{background:#f2f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tr:nth-child(even) td{background:#fafbfd}
+@media print{body{margin:10mm}table{min-width:0;font-size:9px}@page{size:A4 landscape;margin:10mm}}
 </style></head>
 <body>
 <h1>${escapeHtml(payload.name)}</h1>
 <p class="meta">Tanggal: ${escapeHtml(payload.tanggal ?? "—")} · ${payload.rows.length} baris · Kategori: ${escapeHtml((payload.categories ?? []).join(", ") || "—")}</p>
-<table><thead><tr>${head}</tr></thead><tbody>
+<div class="wrap"><table><colgroup>${cols}</colgroup><thead><tr>${head}</tr></thead><tbody>
 ${body}
-</tbody></table>
+</tbody></table></div>
 <script type="application/json" id="dataset">${JSON.stringify({ ...meta(payload), data: payload.rows }).replace(/</g, "\\u003c")}</script>
 </body></html>`;
     download(new Blob([html], { type: "text/html;charset=utf-8" }), `${base}.html`);
@@ -240,11 +248,15 @@ ${payload.rows
   if (format === "docx") {
     const { Document, Packer, Paragraph, HeadingLevel, Table, TableRow, TableCell, TextRun, WidthType } =
       await import("docx");
+    // A4 landscape usable width ≈ 14000 dxa (twips)
+    const USABLE_DXA = 14000;
+    const widths = columnPercents(payload.fields).map((p) => Math.round((p / 100) * USABLE_DXA));
     const headerRow = new TableRow({
       tableHeader: true,
       children: payload.fields.map(
-        (f) =>
+        (f, i) =>
           new TableCell({
+            width: { size: widths[i] ?? 1000, type: WidthType.DXA },
             children: [new Paragraph({ children: [new TextRun({ text: f, bold: true })] })],
           }),
       ),
@@ -253,13 +265,23 @@ ${payload.rows
       (r) =>
         new TableRow({
           children: payload.fields.map(
-            (f) => new TableCell({ children: [new Paragraph(cell(r[f]).slice(0, 2000))] }),
+            (f, i) =>
+              new TableCell({
+                width: { size: widths[i] ?? 1000, type: WidthType.DXA },
+                children: [new Paragraph(cell(r[f]).slice(0, 2000))],
+              }),
           ),
         }),
     );
     const doc = new Document({
       sections: [
         {
+          properties: {
+            page: {
+              size: { orientation: "landscape" as never },
+              margin: { top: 567, bottom: 567, left: 567, right: 567 },
+            },
+          },
           children: [
             new Paragraph({ text: payload.name, heading: HeadingLevel.HEADING_1 }),
             new Paragraph(
@@ -268,6 +290,8 @@ ${payload.rows
             new Paragraph(""),
             new Table({
               width: { size: 100, type: WidthType.PERCENTAGE },
+              columnWidths: widths,
+              layout: "fixed" as never,
               rows: [headerRow, ...dataRows],
             }),
           ],
@@ -283,24 +307,40 @@ ${payload.rows
     const { jsPDF } = await import("jspdf");
     const autoTable = (await import("jspdf-autotable")).default;
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    const margin = 30;
+    const usable = doc.internal.pageSize.getWidth() - margin * 2;
+    const pcts = columnPercents(payload.fields);
+    const columnStyles: Record<number, { cellWidth: number }> = {};
+    pcts.forEach((p, i) => {
+      columnStyles[i] = { cellWidth: (p / 100) * usable };
+    });
     doc.setFontSize(14);
-    doc.text(payload.name, 40, 40);
+    doc.text(payload.name, margin, 40);
     doc.setFontSize(9);
     doc.text(
       `Tanggal: ${payload.tanggal ?? "-"} | ${payload.rows.length} baris | Kategori: ${(payload.categories ?? []).join(", ") || "-"}`,
-      40,
+      margin,
       56,
     );
     autoTable(doc, {
       startY: 70,
       head: [payload.fields],
-      body: payload.rows.map((r) => payload.fields.map((f) => cell(r[f]).slice(0, 300))),
-      styles: { fontSize: 7, cellPadding: 3, overflow: "linebreak" },
-      headStyles: { fillColor: [20, 33, 61] },
+      body: payload.rows.map((r) => payload.fields.map((f) => cell(r[f]).slice(0, 600))),
+      tableWidth: usable,
+      styles: {
+        fontSize: 7,
+        cellPadding: 3,
+        overflow: "linebreak",
+        valign: "top",
+        minCellHeight: 0,
+      },
+      headStyles: { fillColor: [20, 33, 61], fontSize: 7, halign: "left" },
       alternateRowStyles: { fillColor: [246, 248, 251] },
-      margin: { left: 30, right: 30 },
+      columnStyles,
+      margin: { left: margin, right: margin, top: 40, bottom: 30 },
     });
     download(doc.output("blob"), `${base}.pdf`);
     return;
   }
+
 }
