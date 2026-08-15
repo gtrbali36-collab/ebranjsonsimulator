@@ -159,6 +159,8 @@ export async function exportReport(payload: ExportPayload, format: ExportFormat)
   }
 
   if (format === "html") {
+    const pcts = columnPercents(payload.fields);
+    const cols = pcts.map((p) => `<col style="width:${p.toFixed(2)}%">`).join("");
     const head = payload.fields.map((f) => `<th>${escapeHtml(f)}</th>`).join("");
     const body = payload.rows
       .map(
@@ -174,17 +176,19 @@ export async function exportReport(payload: ExportPayload, format: ExportFormat)
 body{font-family:system-ui,sans-serif;margin:24px;color:#14213d}
 h1{font-size:20px;margin:0 0 4px}
 p.meta{color:#5b6478;font-size:13px;margin:0 0 16px}
-table{border-collapse:collapse;width:100%;font-size:13px}
-th,td{border:1px solid #d9dee8;padding:6px 8px;text-align:left;vertical-align:top}
-th{background:#f2f5f9}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:1100px;table-layout:fixed;font-size:13px}
+th,td{border:1px solid #d9dee8;padding:6px 8px;text-align:left;vertical-align:top;overflow-wrap:anywhere;word-break:normal}
+th{background:#f2f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tr:nth-child(even) td{background:#fafbfd}
+@media print{body{margin:10mm}table{min-width:0;font-size:9px}@page{size:A4 landscape;margin:10mm}}
 </style></head>
 <body>
 <h1>${escapeHtml(payload.name)}</h1>
 <p class="meta">Tanggal: ${escapeHtml(payload.tanggal ?? "—")} · ${payload.rows.length} baris · Kategori: ${escapeHtml((payload.categories ?? []).join(", ") || "—")}</p>
-<table><thead><tr>${head}</tr></thead><tbody>
+<div class="wrap"><table><colgroup>${cols}</colgroup><thead><tr>${head}</tr></thead><tbody>
 ${body}
-</tbody></table>
+</tbody></table></div>
 <script type="application/json" id="dataset">${JSON.stringify({ ...meta(payload), data: payload.rows }).replace(/</g, "\\u003c")}</script>
 </body></html>`;
     download(new Blob([html], { type: "text/html;charset=utf-8" }), `${base}.html`);
