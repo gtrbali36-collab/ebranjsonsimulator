@@ -13,8 +13,9 @@ export const fetchRemoteJson = createServerFn({ method: "POST" })
     const text = await res.text();
     if (text.length > 20_000_000) throw new Error("File terlalu besar (maks 20MB)");
     try {
-      return { json: JSON.parse(text) as unknown, size: text.length };
+      JSON.parse(text);
     } catch {
       throw new Error("Isi link bukan JSON yang valid");
     }
+    return { text, size: text.length };
   });
