@@ -74,7 +74,7 @@ export const listReports = createServerFn({ method: "GET" }).handler(async () =>
     .select("*")
     .order("created_at", { ascending: false });
   if (error) throw new Error("Gagal memuat data tersimpan.");
-  return (data ?? []) as unknown[];
+  return JSON.parse(JSON.stringify(data ?? [])) as Record<string, unknown>[];
 });
 
 export const deleteReport = createServerFn({ method: "POST" })
