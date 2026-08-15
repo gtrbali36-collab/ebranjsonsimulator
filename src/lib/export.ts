@@ -135,7 +135,9 @@ export async function exportReport(payload: ExportPayload, format: ExportFormat)
     const XLSX = await import("xlsx");
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(toMatrix(payload));
-    ws["!cols"] = payload.fields.map(() => ({ wch: 28 }));
+    ws["!cols"] = columnPercents(payload.fields).map((p) => ({
+      wch: Math.max(10, Math.min(70, Math.round(p * 1.6))),
+    }));
     XLSX.utils.book_append_sheet(wb, ws, "Data");
     const info = XLSX.utils.json_to_sheet(
       Object.entries(meta(payload)).map(([key, value]) => ({
