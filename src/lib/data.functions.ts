@@ -67,14 +67,25 @@ export const saveReport = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export type SavedReportDTO = {
+  id: string;
+  name: string;
+  tanggal: string | null;
+  categories: string[];
+  fields: string[];
+  row_count: number;
+  rows: Record<string, string | number | boolean | null>[];
+  created_at: string;
+};
+
 export const listReports = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
     .from("saved_reports")
-    .select("*")
+    .select("id, name, tanggal, categories, fields, row_count, rows, created_at")
     .order("created_at", { ascending: false });
   if (error) throw new Error("Gagal memuat data tersimpan.");
-  return JSON.parse(JSON.stringify(data ?? [])) as Record<string, unknown>[];
+  return JSON.parse(JSON.stringify(data ?? [])) as SavedReportDTO[];
 });
 
 export const deleteReport = createServerFn({ method: "POST" })
