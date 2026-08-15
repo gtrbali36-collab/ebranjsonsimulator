@@ -248,11 +248,15 @@ ${payload.rows
   if (format === "docx") {
     const { Document, Packer, Paragraph, HeadingLevel, Table, TableRow, TableCell, TextRun, WidthType } =
       await import("docx");
+    // A4 landscape usable width ≈ 14000 dxa (twips)
+    const USABLE_DXA = 14000;
+    const widths = columnPercents(payload.fields).map((p) => Math.round((p / 100) * USABLE_DXA));
     const headerRow = new TableRow({
       tableHeader: true,
       children: payload.fields.map(
-        (f) =>
+        (f, i) =>
           new TableCell({
+            width: { size: widths[i] ?? 1000, type: WidthType.DXA },
             children: [new Paragraph({ children: [new TextRun({ text: f, bold: true })] })],
           }),
       ),
@@ -261,13 +265,23 @@ ${payload.rows
       (r) =>
         new TableRow({
           children: payload.fields.map(
-            (f) => new TableCell({ children: [new Paragraph(cell(r[f]).slice(0, 2000))] }),
+            (f, i) =>
+              new TableCell({
+                width: { size: widths[i] ?? 1000, type: WidthType.DXA },
+                children: [new Paragraph(cell(r[f]).slice(0, 2000))],
+              }),
           ),
         }),
     );
     const doc = new Document({
       sections: [
         {
+          properties: {
+            page: {
+              size: { orientation: "landscape" as never },
+              margin: { top: 567, bottom: 567, left: 567, right: 567 },
+            },
+          },
           children: [
             new Paragraph({ text: payload.name, heading: HeadingLevel.HEADING_1 }),
             new Paragraph(
@@ -276,6 +290,8 @@ ${payload.rows
             new Paragraph(""),
             new Table({
               width: { size: 100, type: WidthType.PERCENTAGE },
+              columnWidths: widths,
+              layout: "fixed" as never,
               rows: [headerRow, ...dataRows],
             }),
           ],
@@ -291,24 +307,40 @@ ${payload.rows
     const { jsPDF } = await import("jspdf");
     const autoTable = (await import("jspdf-autotable")).default;
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    const margin = 30;
+    const usable = doc.internal.pageSize.getWidth() - margin * 2;
+    const pcts = columnPercents(payload.fields);
+    const columnStyles: Record<number, { cellWidth: number }> = {};
+    pcts.forEach((p, i) => {
+      columnStyles[i] = { cellWidth: (p / 100) * usable };
+    });
     doc.setFontSize(14);
-    doc.text(payload.name, 40, 40);
+    doc.text(payload.name, margin, 40);
     doc.setFontSize(9);
     doc.text(
       `Tanggal: ${payload.tanggal ?? "-"} | ${payload.rows.length} baris | Kategori: ${(payload.categories ?? []).join(", ") || "-"}`,
-      40,
+      margin,
       56,
     );
     autoTable(doc, {
       startY: 70,
       head: [payload.fields],
-      body: payload.rows.map((r) => payload.fields.map((f) => cell(r[f]).slice(0, 300))),
-      styles: { fontSize: 7, cellPadding: 3, overflow: "linebreak" },
-      headStyles: { fillColor: [20, 33, 61] },
+      body: payload.rows.map((r) => payload.fields.map((f) => cell(r[f]).slice(0, 600))),
+      tableWidth: usable,
+      styles: {
+        fontSize: 7,
+        cellPadding: 3,
+        overflow: "linebreak",
+        valign: "top",
+        minCellHeight: 0,
+      },
+      headStyles: { fillColor: [20, 33, 61], fontSize: 7, halign: "left" },
       alternateRowStyles: { fillColor: [246, 248, 251] },
-      margin: { left: 30, right: 30 },
+      columnStyles,
+      margin: { left: margin, right: margin, top: 40, bottom: 30 },
     });
     download(doc.output("blob"), `${base}.pdf`);
     return;
   }
+
 }
