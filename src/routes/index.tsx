@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ResultTable, type Row } from "@/components/ResultTable";
-import { supabase } from "@/integrations/supabase/client";
+import { createDataset, insertDatasetItems, saveReport } from "@/lib/data.functions";
 import { fetchRemoteJson } from "@/lib/remote-json.functions";
 import {
   analyzeJson,
