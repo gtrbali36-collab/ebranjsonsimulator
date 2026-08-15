@@ -37,6 +37,12 @@ export function ResultTable({
     );
   }, [rows, fields, query]);
 
+  const percents = useMemo(() => columnPercents(fields), [fields]);
+  const tableMinWidth = useMemo(
+    () => 48 + fields.reduce((sum, f) => sum + columnMinPx(f), 0),
+    [fields],
+  );
+
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
   const slice = filtered.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
