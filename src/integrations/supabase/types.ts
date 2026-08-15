@@ -87,33 +87,42 @@ export type Database = {
       }
       saved_reports: {
         Row: {
+          analysis: string | null
           categories: Json
           created_at: string
           dataset_id: string | null
           fields: Json
           id: string
+          kind: string
+          meta: Json
           name: string
           row_count: number
           rows: Json
           tanggal: string | null
         }
         Insert: {
+          analysis?: string | null
           categories?: Json
           created_at?: string
           dataset_id?: string | null
           fields?: Json
           id?: string
+          kind?: string
+          meta?: Json
           name: string
           row_count?: number
           rows?: Json
           tanggal?: string | null
         }
         Update: {
+          analysis?: string | null
           categories?: Json
           created_at?: string
           dataset_id?: string | null
           fields?: Json
           id?: string
+          kind?: string
+          meta?: Json
           name?: string
           row_count?: number
           rows?: Json

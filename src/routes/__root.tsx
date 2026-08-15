@@ -145,12 +145,20 @@ function RootComponent() {
                 Dashboard
               </Link>
               <Link
+                to="/kompare"
+                className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                activeProps={{ className: "bg-secondary text-foreground" }}
+              >
+                Kompare
+              </Link>
+              <Link
                 to="/tersimpan"
                 className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                 activeProps={{ className: "bg-secondary text-foreground" }}
               >
                 Data Tersimpan
               </Link>
+
             </nav>
           </div>
         </header>

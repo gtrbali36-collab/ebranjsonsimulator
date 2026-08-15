@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as KompareRouteImport } from './routes/kompare'
 import { Route as TersimpanRouteImport } from './routes/tersimpan'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KompareRoute = KompareRouteImport.update({
+  id: '/kompare',
+  path: '/kompare',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TersimpanRoute = TersimpanRouteImport.update({
@@ -25,27 +31,31 @@ const TersimpanRoute = TersimpanRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/kompare': typeof KompareRoute
   '/tersimpan': typeof TersimpanRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/kompare': typeof KompareRoute
   '/tersimpan': typeof TersimpanRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/kompare': typeof KompareRoute
   '/tersimpan': typeof TersimpanRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/tersimpan'
+  fullPaths: '/' | '/kompare' | '/tersimpan'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/tersimpan'
-  id: '__root__' | '/' | '/tersimpan'
+  to: '/' | '/kompare' | '/tersimpan'
+  id: '__root__' | '/' | '/kompare' | '/tersimpan'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  KompareRoute: typeof KompareRoute
   TersimpanRoute: typeof TersimpanRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kompare': {
+      id: '/kompare'
+      path: '/kompare'
+      fullPath: '/kompare'
+      preLoaderRoute: typeof KompareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tersimpan': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  KompareRoute: KompareRoute,
   TersimpanRoute: TersimpanRoute,
 }
 export const routeTree = rootRouteImport

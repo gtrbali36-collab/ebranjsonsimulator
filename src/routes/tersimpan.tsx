@@ -37,11 +37,17 @@ type Report = {
   row_count: number;
   rows: Row[];
   created_at: string;
+  kind: string;
+  analysis: string | null;
+  meta: { sources?: string[]; prompt?: string | null; attachment?: string | null } | null;
 };
+
+const KIND_LABEL: Record<string, string> = { compare: "Compare", input: "Data Input" };
 
 function SavedPage() {
   const queryClient = useQueryClient();
   const [openId, setOpenId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | "input" | "compare">("all");
 
   const { data, isLoading } = useQuery({
     queryKey: ["saved_reports"],
@@ -60,7 +66,8 @@ function SavedPage() {
     void queryClient.invalidateQueries({ queryKey: ["saved_reports"] });
   }
 
-  const reports = data ?? [];
+  const all = data ?? [];
+  const reports = filter === "all" ? all : all.filter((r) => (r.kind ?? "input") === filter);
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
@@ -69,6 +76,23 @@ function SavedPage() {
         <p className="mt-1 text-muted-foreground">
           Hasil seleksi yang sudah disimpan ke database.
         </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {([
+          ["all", `Semua (${all.length})`],
+          ["input", `Data Input (${all.filter((r) => (r.kind ?? "input") === "input").length})`],
+          ["compare", `Compare (${all.filter((r) => r.kind === "compare").length})`],
+        ] as const).map(([value, label]) => (
+          <Button
+            key={value}
+            size="sm"
+            variant={filter === value ? "default" : "outline"}
+            onClick={() => setFilter(value)}
+          >
+            {label}
+          </Button>
+        ))}
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Memuat…</p>}
@@ -87,7 +111,12 @@ function SavedPage() {
           <article key={report.id} className="panel p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="font-display text-lg font-semibold">{report.name}</h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={report.kind === "compare" ? "default" : "secondary"}>
+                    {KIND_LABEL[report.kind ?? "input"] ?? "Data Input"}
+                  </Badge>
+                  <h2 className="font-display text-lg font-semibold">{report.name}</h2>
+                </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1.5">
                     <Calendar className="size-4" /> {report.tanggal ?? "—"}
@@ -130,6 +159,20 @@ function SavedPage() {
                 </Button>
               </div>
             </div>
+
+            {report.kind === "compare" && report.meta?.sources?.length ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Sumber: {report.meta.sources.join(" vs ")}
+                {report.meta.prompt ? ` · Prompt: ${report.meta.prompt.slice(0, 120)}` : ""}
+              </p>
+            ) : null}
+
+            {openId === report.id && report.analysis && (
+              <div className="mt-5 whitespace-pre-wrap rounded-lg border border-border bg-secondary/40 p-4 text-sm leading-relaxed">
+                <p className="mb-2 font-semibold">Analisis AI</p>
+                {report.analysis}
+              </div>
+            )}
 
             {openId === report.id && (
               <div className="mt-5">
