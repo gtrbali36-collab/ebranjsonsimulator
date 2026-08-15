@@ -56,6 +56,9 @@ const saveReportInput = z.object({
   fields: z.array(z.string().max(300)),
   row_count: z.number().int().min(0),
   rows: jsonValue,
+  kind: z.enum(["input", "compare"]).default("input"),
+  analysis: z.string().max(100_000).nullable().default(null),
+  meta: jsonValue.default({}),
 });
 
 export const saveReport = createServerFn({ method: "POST" })
@@ -76,17 +79,21 @@ export type SavedReportDTO = {
   row_count: number;
   rows: Record<string, string | number | boolean | null>[];
   created_at: string;
+  kind: string;
+  analysis: string | null;
+  meta: { sources?: string[]; prompt?: string | null; attachment?: string | null } | null;
 };
 
 export const listReports = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
     .from("saved_reports")
-    .select("id, name, tanggal, categories, fields, row_count, rows, created_at")
+    .select("id, name, tanggal, categories, fields, row_count, rows, created_at, kind, analysis, meta")
     .order("created_at", { ascending: false });
   if (error) throw new Error("Gagal memuat data tersimpan.");
   return JSON.parse(JSON.stringify(data ?? [])) as SavedReportDTO[];
 });
+
 
 export const deleteReport = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))

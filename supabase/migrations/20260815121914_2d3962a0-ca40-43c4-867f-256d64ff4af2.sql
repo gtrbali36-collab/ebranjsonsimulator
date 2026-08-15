@@ -1,0 +1,1 @@
+DELETE FROM public.saved_reports WHERE id = '6cab6f43-7d97-4dce-8806-82133b43f407';
