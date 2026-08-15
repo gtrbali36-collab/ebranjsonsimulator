@@ -139,40 +139,40 @@ function Dashboard() {
     setSelectedFields([]);
     setResult(null);
 
-    const { data: dataset, error } = await supabase
-      .from("datasets")
-      .insert({
-        name: sourceName,
-        source_type: sourceType,
-        source_url: sourceUrl,
-        tanggal: analysis.tanggal,
-        total_items: analysis.itemCount,
-        categories: analysis.categories,
-        fields: analysis.fields,
-        meta: { rootKeys: analysis.rootKeys, itemsPath: analysis.itemsPath, total: analysis.total },
-      })
-      .select("id")
-      .single();
-
-    if (error || !dataset) {
+    let datasetId: string;
+    try {
+      const created = await createDataset({
+        data: {
+          name: sourceName,
+          source_type: sourceType === "url" ? "url" : "file",
+          source_url: sourceUrl,
+          tanggal: analysis.tanggal,
+          total_items: analysis.itemCount,
+          categories: analysis.categories,
+          fields: analysis.fields,
+          meta: { rootKeys: analysis.rootKeys, itemsPath: analysis.itemsPath, total: analysis.total },
+        },
+      });
+      datasetId = created.id;
+    } catch {
       toast.error("Pemetaan berhasil, tapi gagal menyimpan ke database.");
       return;
     }
 
     const key = categoryKeyOf(items);
     const payload = items.map((item) => ({
-      dataset_id: dataset.id,
       kategori: key ? String(item[key] ?? "") : null,
-      data: item as never,
+      data: item,
     }));
     for (let i = 0; i < payload.length; i += 400) {
-      const { error: insErr } = await supabase.from("dataset_items").insert(payload.slice(i, i + 400));
-      if (insErr) {
+      try {
+        await insertDatasetItems({ data: { dataset_id: datasetId, items: payload.slice(i, i + 400) } });
+      } catch {
         toast.error("Sebagian item gagal disimpan ke database.");
         break;
       }
     }
-    setStage({ analysis, items, datasetId: dataset.id, sourceName });
+    setStage({ analysis, items, datasetId, sourceName });
     toast.success(`Berhasil membaca ${items.length.toLocaleString("id-ID")} item & menyimpan ke database.`);
   }
 
