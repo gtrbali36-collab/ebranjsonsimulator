@@ -7,6 +7,7 @@ import { Calendar, Database, Layers, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ResultTable, type Row } from "@/components/ResultTable";
+import { ExportMenu } from "@/components/ExportMenu";
 import { deleteReport, listReports } from "@/lib/data.functions";
 
 export const Route = createFileRoute("/tersimpan")({
