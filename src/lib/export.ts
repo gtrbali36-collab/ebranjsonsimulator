@@ -1,3 +1,5 @@
+import { columnPercents } from "@/lib/column-width";
+
 export type ExportRow = Record<string, unknown>;
 
 export type ExportFormat =
