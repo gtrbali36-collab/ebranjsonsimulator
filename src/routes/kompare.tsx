@@ -432,6 +432,76 @@ function ComparePage() {
             ))}
           </div>
 
+          {selectedFields.length > 0 && (
+            <>
+              <Separator className="my-6" />
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Normalisasi Field
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Cocokkan field tiap file ke satu nama kanonikal. Nama kanonikal bisa diubah.
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={autoMap}>
+                  <Wand2 className="size-4" /> Cocokkan otomatis
+                </Button>
+              </div>
+              <div className="overflow-x-auto rounded-md border border-border">
+                <table className="w-full text-sm">
+                  <thead className="bg-secondary/60">
+                    <tr>
+                      <th className="p-2 text-left font-semibold">Nama kanonikal</th>
+                      {sources.map((s, i) => (
+                        <th key={`${s.name}-${i}`} className="p-2 text-left font-semibold">
+                          {s.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedFields.map((c) => (
+                      <tr key={c} className="border-t border-border">
+                        <td className="p-2 align-middle">
+                          <Input
+                            value={c}
+                            aria-label={`Nama kanonikal untuk ${c}`}
+                            onChange={(e) => renameCanonical(c, e.target.value)}
+                            className="h-8"
+                          />
+                        </td>
+                        {sources.map((s, i) => {
+                          const available = sourceFields[i] ?? [];
+                          const value = fieldMaps[i]?.[c] ?? "";
+                          return (
+                            <td key={`${s.name}-${i}-${c}`} className="p-2 align-middle">
+                              <select
+                                aria-label={`Field ${s.name} untuk ${c}`}
+                                value={value}
+                                onChange={(e) => setMapping(i, c, e.target.value)}
+                                className={`h-8 w-full rounded-md border border-input bg-background px-2 text-sm ${
+                                  value ? "" : "text-muted-foreground"
+                                }`}
+                              >
+                                <option value="">— tidak ada —</option>
+                                {available.map((f) => (
+                                  <option key={f} value={f}>
+                                    {f}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
           <Button className="mt-5" onClick={buildResult}>
             <GitCompare className="size-4" /> Proses Perbandingan
           </Button>
