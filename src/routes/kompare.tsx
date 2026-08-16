@@ -242,6 +242,7 @@ function ComparePage() {
     const keyField = pickKeyField(filtered, selectedFields);
     const built = buildCompare(filtered, selectedFields, keyField);
     setResult(built);
+    setPerSource(filtered.map((f) => ({ name: f.name, rows: f.items as Row[] })));
     setAiText(null);
     toast.success(`${built.rows.length.toLocaleString("id-ID")} baris perbandingan siap.`);
   }
