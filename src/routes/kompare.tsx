@@ -588,7 +588,16 @@ function ComparePage() {
             </Button>
           </div>
 
-          <ResultTable rows={result.rows} fields={result.fields} />
+          <CompareCards sources={perSource} fields={selectedFields} />
+
+          <details className="mt-6 rounded-lg border border-border bg-card p-4 shadow-sm">
+            <summary className="cursor-pointer text-sm font-semibold">
+              Tabel gabungan (status per baris)
+            </summary>
+            <div className="mt-4">
+              <ResultTable rows={result.rows} fields={result.fields} />
+            </div>
+          </details>
         </Section>
       )}
 
