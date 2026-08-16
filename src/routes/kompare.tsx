@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   Bot,
@@ -15,6 +15,7 @@ import {
   Table2,
   Trash2,
   Upload,
+  Wand2,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ResultTable, type Row } from "@/components/ResultTable";
 import { analyzeJson, categoryKeyOf, extractItems, type Analysis, type JsonItem } from "@/lib/analyze";
 import { buildCompare, pickKeyField, type CompareSummary } from "@/lib/compare";
+import { buildInitialMap, guessField, normalizeItems, type FieldMap } from "@/lib/normalize";
 import { analyzeComparison } from "@/lib/ai.functions";
 import { saveReport } from "@/lib/data.functions";
 import { fetchRemoteJson } from "@/lib/remote-json.functions";
@@ -94,6 +96,7 @@ function ComparePage() {
 
   const [selectedCats, setSelectedCats] = useState<string[]>([]);
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const [fieldMaps, setFieldMaps] = useState<FieldMap[]>([]);
   const [result, setResult] = useState<
     { rows: Row[]; fields: string[]; summary: CompareSummary } | null
   >(null);
@@ -119,6 +122,26 @@ function ComparePage() {
     for (const s of sources) for (const f of s.analysis.fields) set.add(f.name);
     return Array.from(set);
   }, [sources]);
+
+  const sourceFields = useMemo(
+    () => sources.map((s) => s.analysis.fields.map((f) => f.name)),
+    [sources],
+  );
+
+  useEffect(() => {
+    setFieldMaps((prev) =>
+      sources.map((_, i) => {
+        const available = sourceFields[i] ?? [];
+        const existing = prev[i] ?? {};
+        const next: FieldMap = {};
+        for (const c of selectedFields) {
+          next[c] = c in existing ? existing[c]! : guessField(c, available);
+        }
+        return next;
+      }),
+    );
+  }, [sources, sourceFields, selectedFields]);
+
 
   function addSource(json: unknown, name: string) {
     const items = extractItems(json);
@@ -170,6 +193,34 @@ function ComparePage() {
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
   }
 
+  function setMapping(sourceIndex: number, canonical: string, value: string) {
+    setFieldMaps((prev) =>
+      prev.map((m, i) => (i === sourceIndex ? { ...m, [canonical]: value } : m)),
+    );
+    setResult(null);
+  }
+
+  function autoMap() {
+    setFieldMaps(sources.map((_, i) => buildInitialMap(selectedFields, sourceFields[i] ?? [])));
+    setResult(null);
+  }
+
+  function renameCanonical(oldName: string, rawNext: string) {
+    const next = rawNext;
+    if (!next.trim() || (next !== oldName && selectedFields.includes(next))) return;
+    setSelectedFields((prev) => prev.map((f) => (f === oldName ? next : f)));
+    setFieldMaps((prev) =>
+      prev.map((m) => {
+        const copy: FieldMap = {};
+        for (const [k, v] of Object.entries(m)) copy[k === oldName ? next : k] = v;
+        return copy;
+      }),
+    );
+    setResult(null);
+  }
+
+
+
   function buildResult() {
     if (sources.length < 2) {
       toast.error("Tambahkan minimal 2 file JSON.");
@@ -179,13 +230,14 @@ function ComparePage() {
       toast.error("Centang minimal satu field.");
       return;
     }
-    const filtered = sources.map((s) => {
+    const filtered = sources.map((s, i) => {
       const key = categoryKeyOf(s.items);
       const items =
         key && selectedCats.length
-          ? s.items.filter((i) => selectedCats.includes(String(i[key] ?? "")))
+          ? s.items.filter((it) => selectedCats.includes(String(it[key] ?? "")))
           : s.items;
-      return { name: s.name, items };
+      const map = fieldMaps[i] ?? buildInitialMap(selectedFields, sourceFields[i] ?? []);
+      return { name: s.name, items: normalizeItems(items, selectedFields, map) };
     });
     const keyField = pickKeyField(filtered, selectedFields);
     const built = buildCompare(filtered, selectedFields, keyField);
@@ -408,6 +460,76 @@ function ComparePage() {
               </label>
             ))}
           </div>
+
+          {selectedFields.length > 0 && (
+            <>
+              <Separator className="my-6" />
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Normalisasi Field
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Cocokkan field tiap file ke satu nama kanonikal. Nama kanonikal bisa diubah.
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={autoMap}>
+                  <Wand2 className="size-4" /> Cocokkan otomatis
+                </Button>
+              </div>
+              <div className="overflow-x-auto rounded-md border border-border">
+                <table className="w-full text-sm">
+                  <thead className="bg-secondary/60">
+                    <tr>
+                      <th className="p-2 text-left font-semibold">Nama kanonikal</th>
+                      {sources.map((s, i) => (
+                        <th key={`${s.name}-${i}`} className="p-2 text-left font-semibold">
+                          {s.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedFields.map((c) => (
+                      <tr key={c} className="border-t border-border">
+                        <td className="p-2 align-middle">
+                          <Input
+                            value={c}
+                            aria-label={`Nama kanonikal untuk ${c}`}
+                            onChange={(e) => renameCanonical(c, e.target.value)}
+                            className="h-8"
+                          />
+                        </td>
+                        {sources.map((s, i) => {
+                          const available = sourceFields[i] ?? [];
+                          const value = fieldMaps[i]?.[c] ?? "";
+                          return (
+                            <td key={`${s.name}-${i}-${c}`} className="p-2 align-middle">
+                              <select
+                                aria-label={`Field ${s.name} untuk ${c}`}
+                                value={value}
+                                onChange={(e) => setMapping(i, c, e.target.value)}
+                                className={`h-8 w-full rounded-md border border-input bg-background px-2 text-sm ${
+                                  value ? "" : "text-muted-foreground"
+                                }`}
+                              >
+                                <option value="">— tidak ada —</option>
+                                {available.map((f) => (
+                                  <option key={f} value={f}>
+                                    {f}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
 
           <Button className="mt-5" onClick={buildResult}>
             <GitCompare className="size-4" /> Proses Perbandingan
