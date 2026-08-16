@@ -201,13 +201,14 @@ function ComparePage() {
       toast.error("Centang minimal satu field.");
       return;
     }
-    const filtered = sources.map((s) => {
+    const filtered = sources.map((s, i) => {
       const key = categoryKeyOf(s.items);
       const items =
         key && selectedCats.length
-          ? s.items.filter((i) => selectedCats.includes(String(i[key] ?? "")))
+          ? s.items.filter((it) => selectedCats.includes(String(it[key] ?? "")))
           : s.items;
-      return { name: s.name, items };
+      const map = fieldMaps[i] ?? buildInitialMap(selectedFields, sourceFields[i] ?? []);
+      return { name: s.name, items: normalizeItems(items, selectedFields, map) };
     });
     const keyField = pickKeyField(filtered, selectedFields);
     const built = buildCompare(filtered, selectedFields, keyField);
