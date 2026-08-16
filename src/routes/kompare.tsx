@@ -100,6 +100,7 @@ function ComparePage() {
   const [result, setResult] = useState<
     { rows: Row[]; fields: string[]; summary: CompareSummary } | null
   >(null);
+  const [perSource, setPerSource] = useState<SourceResult[]>([]);
 
   const [prompt, setPrompt] = useState("");
   const [attachment, setAttachment] = useState<{ name: string; text: string } | null>(null);
