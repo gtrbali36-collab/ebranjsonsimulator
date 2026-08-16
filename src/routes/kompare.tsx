@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ResultTable, type Row } from "@/components/ResultTable";
 import { analyzeJson, categoryKeyOf, extractItems, type Analysis, type JsonItem } from "@/lib/analyze";
 import { buildCompare, pickKeyField, type CompareSummary } from "@/lib/compare";
+import { buildInitialMap, guessField, normalizeItems, type FieldMap } from "@/lib/normalize";
 import { analyzeComparison } from "@/lib/ai.functions";
 import { saveReport } from "@/lib/data.functions";
 import { fetchRemoteJson } from "@/lib/remote-json.functions";
