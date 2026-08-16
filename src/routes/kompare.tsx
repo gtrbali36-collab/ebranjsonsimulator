@@ -192,6 +192,34 @@ function ComparePage() {
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
   }
 
+  function setMapping(sourceIndex: number, canonical: string, value: string) {
+    setFieldMaps((prev) =>
+      prev.map((m, i) => (i === sourceIndex ? { ...m, [canonical]: value } : m)),
+    );
+    setResult(null);
+  }
+
+  function autoMap() {
+    setFieldMaps(sources.map((_, i) => buildInitialMap(selectedFields, sourceFields[i] ?? [])));
+    setResult(null);
+  }
+
+  function renameCanonical(oldName: string, rawNext: string) {
+    const next = rawNext;
+    if (!next.trim() || (next !== oldName && selectedFields.includes(next))) return;
+    setSelectedFields((prev) => prev.map((f) => (f === oldName ? next : f)));
+    setFieldMaps((prev) =>
+      prev.map((m) => {
+        const copy: FieldMap = {};
+        for (const [k, v] of Object.entries(m)) copy[k === oldName ? next : k] = v;
+        return copy;
+      }),
+    );
+    setResult(null);
+  }
+
+
+
   function buildResult() {
     if (sources.length < 2) {
       toast.error("Tambahkan minimal 2 file JSON.");
