@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { ResultTable, type Row } from "@/components/ResultTable";
+import { CompareCards, type SourceResult } from "@/components/CompareCards";
 import { analyzeJson, categoryKeyOf, extractItems, type Analysis, type JsonItem } from "@/lib/analyze";
 import { buildCompare, pickKeyField, type CompareSummary } from "@/lib/compare";
 import { buildInitialMap, guessField, normalizeItems, type FieldMap } from "@/lib/normalize";
