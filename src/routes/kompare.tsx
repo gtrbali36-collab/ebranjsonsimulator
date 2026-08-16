@@ -120,6 +120,26 @@ function ComparePage() {
     return Array.from(set);
   }, [sources]);
 
+  const sourceFields = useMemo(
+    () => sources.map((s) => s.analysis.fields.map((f) => f.name)),
+    [sources],
+  );
+
+  useEffect(() => {
+    setFieldMaps((prev) =>
+      sources.map((_, i) => {
+        const available = sourceFields[i] ?? [];
+        const existing = prev[i] ?? {};
+        const next: FieldMap = {};
+        for (const c of selectedFields) {
+          next[c] = c in existing ? existing[c]! : guessField(c, available);
+        }
+        return next;
+      }),
+    );
+  }, [sources, sourceFields, selectedFields]);
+
+
   function addSource(json: unknown, name: string) {
     const items = extractItems(json);
     if (items.length === 0) {
