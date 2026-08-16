@@ -95,6 +95,7 @@ function ComparePage() {
 
   const [selectedCats, setSelectedCats] = useState<string[]>([]);
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const [fieldMaps, setFieldMaps] = useState<FieldMap[]>([]);
   const [result, setResult] = useState<
     { rows: Row[]; fields: string[]; summary: CompareSummary } | null
   >(null);
