@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { ResultTable, type Row } from "@/components/ResultTable";
+import { CompareCards, type SourceResult } from "@/components/CompareCards";
 import { analyzeJson, categoryKeyOf, extractItems, type Analysis, type JsonItem } from "@/lib/analyze";
 import { buildCompare, pickKeyField, type CompareSummary } from "@/lib/compare";
 import { buildInitialMap, guessField, normalizeItems, type FieldMap } from "@/lib/normalize";
@@ -100,6 +101,7 @@ function ComparePage() {
   const [result, setResult] = useState<
     { rows: Row[]; fields: string[]; summary: CompareSummary } | null
   >(null);
+  const [perSource, setPerSource] = useState<SourceResult[]>([]);
 
   const [prompt, setPrompt] = useState("");
   const [attachment, setAttachment] = useState<{ name: string; text: string } | null>(null);
@@ -242,6 +244,7 @@ function ComparePage() {
     const keyField = pickKeyField(filtered, selectedFields);
     const built = buildCompare(filtered, selectedFields, keyField);
     setResult(built);
+    setPerSource(filtered.map((f) => ({ name: f.name, rows: f.items as Row[] })));
     setAiText(null);
     toast.success(`${built.rows.length.toLocaleString("id-ID")} baris perbandingan siap.`);
   }
@@ -585,7 +588,16 @@ function ComparePage() {
             </Button>
           </div>
 
-          <ResultTable rows={result.rows} fields={result.fields} />
+          <CompareCards sources={perSource} fields={selectedFields} />
+
+          <details className="mt-6 rounded-lg border border-border bg-card p-4 shadow-sm">
+            <summary className="cursor-pointer text-sm font-semibold">
+              Tabel gabungan (status per baris)
+            </summary>
+            <div className="mt-4">
+              <ResultTable rows={result.rows} fields={result.fields} />
+            </div>
+          </details>
         </Section>
       )}
 
