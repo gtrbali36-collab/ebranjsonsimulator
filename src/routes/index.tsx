@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ResultTable, type Row } from "@/components/ResultTable";
+import { OutputPreview } from "@/components/OutputPreview";
 import { createDataset, insertDatasetItems, saveReport } from "@/lib/data.functions";
 import { fetchRemoteJson } from "@/lib/remote-json.functions";
 import {
@@ -49,6 +50,14 @@ export const Route = createFileRoute("/")({
   }),
   component: Dashboard,
 });
+
+type DataKind = "input" | "output" | "other";
+
+const DATA_KINDS: { value: DataKind; label: string; desc: string }[] = [
+  { value: "input", label: "Data Input", desc: "JSON mentah hasil pengumpulan data." },
+  { value: "output", label: "Data Output", desc: "JSON hasil olahan/penilaian sistem." },
+  { value: "other", label: "Lainnya", desc: "Jenis data lain di luar dua kategori itu." },
+];
 
 type Stage = {
   analysis: Analysis;
@@ -105,6 +114,7 @@ function Dashboard() {
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState("");
   const [reading, setReading] = useState(false);
+  const [dataKind, setDataKind] = useState<DataKind>("input");
   const [stage, setStage] = useState<Stage | null>(null);
 
   const [selectedCats, setSelectedCats] = useState<string[]>([]);
@@ -151,6 +161,7 @@ function Dashboard() {
           categories: analysis.categories,
           fields: analysis.fields,
           meta: { rootKeys: analysis.rootKeys, itemsPath: analysis.itemsPath, total: analysis.total },
+          data_kind: dataKind,
         },
       });
       datasetId = created.id;
@@ -234,6 +245,7 @@ function Dashboard() {
           fields: result.fields,
           row_count: result.rows.length,
           rows: result.rows,
+          data_kind: dataKind,
         },
       });
       toast.success("Hasil tersimpan. Lihat di halaman Data Tersimpan.");
@@ -262,6 +274,27 @@ function Dashboard() {
         title="Sumber Data"
         desc="Pilih file JSON dari perangkat atau masukkan link file JSON."
       >
+        <div className="mb-5">
+          <Label className="mb-2 block">Jenis Data</Label>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {DATA_KINDS.map((k) => (
+              <button
+                key={k.value}
+                type="button"
+                onClick={() => setDataKind(k.value)}
+                className={`rounded-md border p-3 text-left transition-colors ${
+                  dataKind === k.value
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-card hover:bg-secondary/60"
+                }`}
+              >
+                <span className="block text-sm font-semibold">{k.label}</span>
+                <span className="block text-xs text-muted-foreground">{k.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="file">Upload File JSON</Label>
@@ -493,7 +526,7 @@ function Dashboard() {
           step={4}
           icon={<Table2 className="size-5" />}
           title="Hasil Seleksi"
-          desc="Tabel hasil lengkap dengan pencarian. Simpan ke database atau proses ulang."
+          desc={dataKind === "output" ? "Tampilan output versi frontend, lalu tabel hasil lengkap dengan pencarian." : "Tabel hasil lengkap dengan pencarian. Simpan ke database atau proses ulang."}
         >
           <div className="mb-4 flex flex-wrap gap-2">
             <Button onClick={saveResult} disabled={saving}>
@@ -504,6 +537,16 @@ function Dashboard() {
               <RefreshCw className="size-4" /> Reproses
             </Button>
           </div>
+          {dataKind === "output" && (
+            <div className="mb-8 rounded-xl border border-border bg-background p-4 sm:p-6">
+              <OutputPreview
+                rows={result.rows}
+                fields={result.fields}
+                tanggal={stage?.analysis.tanggal ?? null}
+                categories={result.cats}
+              />
+            </div>
+          )}
           <ResultTable rows={result.rows} fields={result.fields} />
         </Section>
       )}
