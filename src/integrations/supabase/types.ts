@@ -50,6 +50,7 @@ export type Database = {
         Row: {
           categories: Json
           created_at: string
+          data_kind: string
           fields: Json
           id: string
           meta: Json
@@ -62,6 +63,7 @@ export type Database = {
         Insert: {
           categories?: Json
           created_at?: string
+          data_kind?: string
           fields?: Json
           id?: string
           meta?: Json
@@ -74,6 +76,7 @@ export type Database = {
         Update: {
           categories?: Json
           created_at?: string
+          data_kind?: string
           fields?: Json
           id?: string
           meta?: Json
@@ -90,6 +93,7 @@ export type Database = {
           analysis: string | null
           categories: Json
           created_at: string
+          data_kind: string
           dataset_id: string | null
           fields: Json
           id: string
@@ -104,6 +108,7 @@ export type Database = {
           analysis?: string | null
           categories?: Json
           created_at?: string
+          data_kind?: string
           dataset_id?: string | null
           fields?: Json
           id?: string
@@ -118,6 +123,7 @@ export type Database = {
           analysis?: string | null
           categories?: Json
           created_at?: string
+          data_kind?: string
           dataset_id?: string | null
           fields?: Json
           id?: string

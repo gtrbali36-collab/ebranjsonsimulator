@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ResultTable, type Row } from "@/components/ResultTable";
 import { ExportMenu } from "@/components/ExportMenu";
+import { OutputPreview } from "@/components/OutputPreview";
 import { deleteReport, listReports } from "@/lib/data.functions";
 
 export const Route = createFileRoute("/tersimpan")({
@@ -38,16 +39,27 @@ type Report = {
   rows: Row[];
   created_at: string;
   kind: string;
+  data_kind: string;
   analysis: string | null;
   meta: { sources?: string[]; prompt?: string | null; attachment?: string | null } | null;
 };
 
-const KIND_LABEL: Record<string, string> = { compare: "Compare", input: "Data Input" };
+const KIND_LABEL: Record<string, string> = {
+  compare: "Compare",
+  input: "Data Input",
+  output: "Data Output",
+  other: "Lainnya",
+};
+
+function labelOf(r: { kind: string; data_kind?: string }) {
+  if (r.kind === "compare") return "Compare";
+  return KIND_LABEL[r.data_kind ?? "input"] ?? "Data Input";
+}
 
 function SavedPage() {
   const queryClient = useQueryClient();
   const [openId, setOpenId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "input" | "compare">("all");
+  const [filter, setFilter] = useState<"all" | "input" | "output" | "other" | "compare">("all");
 
   const { data, isLoading } = useQuery({
     queryKey: ["saved_reports"],
@@ -67,7 +79,9 @@ function SavedPage() {
   }
 
   const all = data ?? [];
-  const reports = filter === "all" ? all : all.filter((r) => (r.kind ?? "input") === filter);
+  const matches = (r: Report, f: string) =>
+    f === "compare" ? r.kind === "compare" : r.kind !== "compare" && (r.data_kind ?? "input") === f;
+  const reports = filter === "all" ? all : all.filter((r) => matches(r, filter));
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
@@ -81,7 +95,9 @@ function SavedPage() {
       <div className="flex flex-wrap gap-2">
         {([
           ["all", `Semua (${all.length})`],
-          ["input", `Data Input (${all.filter((r) => (r.kind ?? "input") === "input").length})`],
+          ["input", `Data Input (${all.filter((r) => matches(r, "input")).length})`],
+          ["output", `Data Output (${all.filter((r) => matches(r, "output")).length})`],
+          ["other", `Lainnya (${all.filter((r) => matches(r, "other")).length})`],
           ["compare", `Compare (${all.filter((r) => r.kind === "compare").length})`],
         ] as const).map(([value, label]) => (
           <Button
@@ -113,7 +129,7 @@ function SavedPage() {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant={report.kind === "compare" ? "default" : "secondary"}>
-                    {KIND_LABEL[report.kind ?? "input"] ?? "Data Input"}
+                    {labelOf(report)}
                   </Badge>
                   <h2 className="font-display text-lg font-semibold">{report.name}</h2>
                 </div>
@@ -171,6 +187,17 @@ function SavedPage() {
               <div className="mt-5 whitespace-pre-wrap rounded-lg border border-border bg-secondary/40 p-4 text-sm leading-relaxed">
                 <p className="mb-2 font-semibold">Analisis AI</p>
                 {report.analysis}
+              </div>
+            )}
+
+            {openId === report.id && report.kind !== "compare" && report.data_kind === "output" && (
+              <div className="mt-5 rounded-xl border border-border bg-background p-4 sm:p-6">
+                <OutputPreview
+                  rows={report.rows ?? []}
+                  fields={report.fields ?? []}
+                  tanggal={report.tanggal}
+                  categories={report.categories ?? []}
+                />
               </div>
             )}
 
