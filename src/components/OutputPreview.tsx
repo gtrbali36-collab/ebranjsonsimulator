@@ -1,17 +1,15 @@
 import { useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ExternalLink, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { ResultTable, type Row } from "@/components/ResultTable";
 
-/** Renders selected/unselected output rows in the "News Checker" frontend layout. */
-
-const SCORE_LABELS: Record<string, string> = {
-  skor_dampak_nasional: "Dampak Nasional",
-  skor_relevansi_dpr: "Relevansi DPR",
-  skor_urgensi: "Urgensi",
-  skor_kualitas: "Kualitas",
-};
+const KOMISI_LIST = [
+  "Komisi I", "Komisi II", "Komisi III", "Komisi IV", "Komisi V",
+  "Komisi VI", "Komisi VII", "Komisi VIII", "Komisi IX", "Komisi X",
+  "Komisi XI", "Komisi XII", "Komisi XIII"
+];
 
 function pick(row: Row, candidates: string[]): string {
   for (const key of candidates) {
@@ -26,155 +24,59 @@ function isSelected(row: Row): boolean {
   return v.includes("selected") || v.includes("terpilih");
 }
 
-function inline(text: string, keyPrefix: string) {
-  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-    part.startsWith("**") && part.endsWith("**") ? (
-      <strong key={`${keyPrefix}-${i}`} className="font-semibold text-foreground">
-        {part.slice(2, -2)}
-      </strong>
-    ) : (
-      <span key={`${keyPrefix}-${i}`}>{part}</span>
-    ),
-  );
-}
-
-function Ringkasan({ text }: { text: string }) {
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-  const bullets = lines.filter((l) => l.startsWith("-") || l.startsWith("*"));
-  const paras = lines.filter((l) => !l.startsWith("-") && !l.startsWith("*") && !l.startsWith("#"));
-  return (
-    <div className="space-y-2 text-sm leading-relaxed text-muted-foreground">
-      {paras.map((p, i) => (
-        <p key={`p-${i}`}>{inline(p, `p${i}`)}</p>
-      ))}
-      {bullets.length > 0 && (
-        <ul className="list-disc space-y-2 pl-5">
-          {bullets.map((b, i) => (
-            <li key={`b-${i}`}>{inline(b.replace(/^[-*]\s*/, ""), `b${i}`)}</li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function ScorePanel({ row, fields }: { row: Row; fields: string[] }) {
-  const scoreFields = fields.filter((f) => /^skor|^score/i.test(f) && !/total/i.test(f));
-  const total = pick(row, ["skor_total", "score_total", "total_score"]);
-  const alasan = pick(row, ["alasan", "reason", "catatan"]);
-  const alasanParts = alasan ? alasan.split(/\n{2,}/).filter(Boolean) : [];
-
-  if (scoreFields.length === 0 && !total && !alasan) return null;
-
-  return (
-    <div className="space-y-4 md:border-l md:border-border md:pl-6">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-        Penilaian Sistem
-      </p>
-      {scoreFields.map((f, i) => (
-        <div key={f}>
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="text-sm font-medium">
-              {SCORE_LABELS[f] ?? f.replace(/^skor_|^score_/i, "").replace(/_/g, " ")}
-            </span>
-            <span className="text-sm font-semibold">{String(row[f] ?? "—")}/5</span>
-          </div>
-          {alasanParts[i] && (
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{alasanParts[i]}</p>
-          )}
-        </div>
-      ))}
-      {alasanParts.length > 0 && scoreFields.length === 0 && (
-        <p className="text-xs leading-relaxed text-muted-foreground">{alasan}</p>
-      )}
-      {total && (
-        <div className="flex items-baseline justify-between border-t border-border pt-3">
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Total Score
-          </span>
-          <span className="font-display text-lg font-bold text-primary">{total}</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function NewsCard({ row, fields }: { row: Row; fields: string[] }) {
+function NewsCardKomisi({ row }: { row: Row }) {
   const [openSource, setOpenSource] = useState(false);
-  const judul = pick(row, ["judul", "title", "headline"]);
-  const ringkasan = pick(row, ["ringkasan", "summary", "deskripsi"]);
-  const peringkat = pick(row, ["peringkat", "rank"]);
-  const total = pick(row, ["skor_total", "score_total", "total_score"]);
-  const sumber = pick(row, ["total_sumber", "jumlah_sumber"]);
-  const media = pick(row, ["media", "sumber", "publisher"]);
+  const judul = pick(row, ["judul", "title", "headline", "isu_utama"]);
+  const alasan = pick(row, ["alasan_pemilihan", "alasan", "catatan", "penjelasan"]);
+  const jenis = pick(row, ["jenis", "kategori"]);
+  const mitra = pick(row, ["mitra", "mitra_kerja", "kementerian"]);
+  const sumber = pick(row, ["sumber", "media", "publisher"]);
   const url = pick(row, ["url", "link"]);
-  const published = pick(row, ["published_at", "tanggal", "date"]);
 
   return (
-    <article className="rounded-xl border border-border border-l-4 border-l-primary bg-card p-5 shadow-sm">
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Badge className="uppercase tracking-wide">Selected</Badge>
-        <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {peringkat ? `Peringkat ${peringkat}` : ""}
-          {peringkat && total ? " · " : ""}
-          {total ? `Score ${total}` : ""}
-        </span>
+    <article className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
+      <div className="flex items-center gap-2">
+        <Badge variant="default" className="bg-red-600 hover:bg-red-700 text-white text-[10px] px-2 py-0.5">SELECTED</Badge>
+        {mitra && <Badge variant="outline" className="text-[10px] text-muted-foreground">{mitra}</Badge>}
       </div>
 
-      {judul && <h3 className="font-display text-lg font-semibold leading-snug">{judul}</h3>}
+      {judul && <h3 className="font-display text-base font-semibold leading-snug text-foreground">{judul}</h3>}
 
-      <div className="mt-4 grid gap-6 md:grid-cols-2">
-        <div>
-          {ringkasan && (
-            <>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Ringkasan Topik
-              </p>
-              <Ringkasan text={ringkasan} />
-            </>
-          )}
+      <div className="grid gap-4 md:grid-cols-2 text-xs">
+        {/* Kolom Kiri: Alasan Pemilihan */}
+        <div className="space-y-1">
+          <p className="font-semibold uppercase tracking-wider text-muted-foreground text-[10px]">Alasan Pemilihan</p>
+          <p className="text-muted-foreground leading-relaxed">{alasan || "—"}</p>
         </div>
-        <ScorePanel row={row} fields={fields} />
+
+        {/* Kolom Kanan: Informasi Berita */}
+        <div className="space-y-1.5 md:border-l md:border-border md:pl-4">
+          <p className="font-semibold uppercase tracking-wider text-muted-foreground text-[10px]">Informasi Berita</p>
+          <div className="grid grid-cols-3 gap-1 text-muted-foreground">
+            <span className="font-medium text-foreground">Jenis</span>
+            <span className="col-span-2">{jenis || "—"}</span>
+            <span className="font-medium text-foreground">Mitra</span>
+            <span className="col-span-2 truncate">{mitra || "—"}</span>
+            <span className="font-medium text-foreground">Sumber</span>
+            <span className="col-span-2 truncate">{sumber || "—"}</span>
+          </div>
+        </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-sm text-muted-foreground">
-        <span>
-          {sumber ? (
-            <>
-              <strong className="font-semibold text-foreground">{sumber} artikel</strong>{" "}
-              dikonsolidasikan
-            </>
-          ) : (
-            media
-          )}
-        </span>
-        {(url || media || published) && (
-          <button
-            type="button"
-            onClick={() => setOpenSource((v) => !v)}
-            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-secondary"
+      <div className="flex items-center justify-end border-t border-border pt-3">
+        {url ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
           >
-            Lihat sumber <ChevronDown className={`size-3.5 ${openSource ? "rotate-180" : ""}`} />
-          </button>
-        )}
+            Buka berita asli <ExternalLink className="size-3" />
+          </a>
+        ) : sumber ? (
+          <span className="text-xs text-muted-foreground">Sumber: {sumber}</span>
+        ) : null}
       </div>
-
-      {openSource && (
-        <div className="mt-3 space-y-1 rounded-lg bg-secondary/50 p-3 text-xs text-muted-foreground">
-          {media && <p>Media: {media}</p>}
-          {published && <p>Terbit: {published}</p>}
-          {url && (
-            <a
-              href={url}
-              target="_blank"
-              rel="noreferrer"
-              className="block break-all text-primary underline"
-            >
-              {url}
-            </a>
-          )}
-        </div>
-      )}
     </article>
   );
 }
@@ -190,50 +92,110 @@ export function OutputPreview({
   tanggal?: string | null;
   categories?: string[];
 }) {
+  // State untuk melacak komisi aktif di sidebar (default ke kategori pertama atau Komisi I)
+  const availableKomisi = useMemo(() => {
+    if (categories && categories.length > 0) return categories;
+    return KOMISI_LIST;
+  }, [categories]);
+
+  const [activeKomisi, setActiveKomisi] = useState<string>(availableKomisi[0] || "Komisi I");
+
+  // Filter baris data berdasarkan komisi yang sedang diklik di sidebar
+  const filteredRowsByKomisi = useMemo(() => {
+    return rows.filter((r) => {
+      const komisiField = pick(r, ["komisi", "nama_komisi", "kategori", "category"]);
+      if (!komisiField) return true; // Jika data tidak punya field komisi spesifik, tampilkan semua
+      return komisiField.toLowerCase() === activeKomisi.toLowerCase();
+    });
+  }, [rows, activeKomisi]);
+
   const { selected, rest } = useMemo(() => {
-    const sel = rows.filter(isSelected);
-    sel.sort((a, b) => Number(a["peringkat"] ?? 999) - Number(b["peringkat"] ?? 999));
-    return { selected: sel, rest: rows.filter((r) => !isSelected(r)) };
-  }, [rows]);
+    const sel = filteredRowsByKomisi.filter(isSelected);
+    const unsel = filteredRowsByKomisi.filter((r) => !isSelected(r));
+    return { selected: sel, rest: unsel };
+  }, [filteredRowsByKomisi]);
 
   return (
-    <div className="space-y-6">
-      <header className="border-b border-border pb-4">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          News Checker{tanggal ? ` · ${tanggal}` : ""}
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+      {/* SIDEBAR KIRI: Daftar Komisi (Romawi) */}
+      <div className="md:col-span-3 space-y-1.5 bg-card p-3 rounded-xl border border-border sticky top-4">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-2 pb-2">
+          Daftar Komisi
         </p>
-        <h2 className="font-display text-2xl font-bold text-primary">
-          {categories?.length ? categories.join(" · ") : "Hasil Output"}
-        </h2>
-      </header>
-
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-display text-lg font-semibold">Berita Terpilih</h3>
-        <p className="text-sm text-muted-foreground">
-          {selected.length} berita · dikonsolidasikan dari beberapa sumber
-        </p>
+        <div className="space-y-1 max-h-[75vh] overflow-y-auto pr-1">
+          {availableKomisi.map((komisi, idx) => {
+            const romanNumeral = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII"][idx] || String(idx + 1);
+            const isActive = activeKomisi === komisi;
+            return (
+              <button
+                key={komisi}
+                onClick={() => setActiveKomisi(komisi)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "hover:bg-secondary text-foreground"
+                }`}
+              >
+                <span className={`w-6 text-center font-bold text-xs px-1.5 py-0.5 rounded ${isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
+                  {romanNumeral}
+                </span>
+                <span className="truncate">{komisi}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {selected.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Tidak ada item berstatus terpilih pada seleksi ini.
-        </p>
-      ) : (
-        <div className="space-y-4">
-          {selected.map((row, i) => (
-            <NewsCard key={i} row={row} fields={fields} />
-          ))}
-        </div>
-      )}
+      {/* KONTEN UTAMA KANAN */}
+      <div className="md:col-span-9 space-y-6">
+        {/* Header Komisi Aktif */}
+        <header className="border-b border-border pb-4 bg-card p-5 rounded-xl border border-border">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            NEWS CHECKER{tanggal ? ` · ${tanggal}` : ""}
+          </p>
+          <h2 className="font-display text-2xl font-bold text-primary mt-1">
+            {activeKomisi}
+          </h2>
+          <p className="text-xs text-muted-foreground mt-2">
+            Bidang Kerja: Pertahanan, Luar Negeri, Informatika
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Mitra: Kementerian Luar Negeri, Kementerian Pertahanan, Kementerian Komunikasi dan Digital, Panglima TNI/Mabes TNI-AD, TNI-AL, TNI-AU, BIN, BSSN, Lemhannas, Bakamla, Wantannas, Dewan Pers, KPI, KIP, LSF.
+          </p>
+        </header>
 
-      {rest.length > 0 && (
-        <div>
-          <h3 className="mb-3 font-display text-lg font-semibold">
-            Berita Tidak Terpilih ({rest.length.toLocaleString("id-ID")})
-          </h3>
-          <ResultTable rows={rest} fields={fields} />
+        {/* Berita Terpilih */}
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="font-display text-lg font-semibold">Berita Terpilih</h3>
+            <p className="text-sm text-muted-foreground">
+              {selected.length} berita untuk {activeKomisi}
+            </p>
+          </div>
+
+          {selected.length === 0 ? (
+            <p className="text-sm text-muted-foreground bg-card p-6 rounded-xl border border-border text-center">
+              Tidak ada berita terpilih untuk {activeKomisi}.
+            </p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {selected.map((row, i) => (
+                <NewsCardKomisi key={i} row={row} />
+              ))}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Berita Tidak Terpilih */}
+        {rest.length > 0 && (
+          <div className="space-y-3 pt-4">
+            <h3 className="font-display text-lg font-semibold">
+              Berita {activeKomisi} Tidak Terpilih ({rest.length.toLocaleString("id-ID")})
+            </h3>
+            <ResultTable rows={rest} fields={fields} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
