@@ -48,7 +48,7 @@ export function ExpandableText({ text }: { text: string }) {
 // ==========================================
 // 1. VIEW UNTUK DAPIL (Tabel Grouping Nested)
 // ==========================================
-function DapilView({ selected, rest, fields, tanggal }: { selected: Row[], rest: Row[], fields: string[], tanggal?: string | null }) {
+function DapilView({ selected, rest, fields, tanggal }: { selected: Row[], rest: Row[], fields: string[], tanggal?: string | null | undefined }) {
   const [searchDapil, setSearchDapil] = useState("");
   const [searchAnggota, setSearchAnggota] = useState("");
 
@@ -201,7 +201,7 @@ function DapilView({ selected, rest, fields, tanggal }: { selected: Row[], rest:
 // ==========================================
 const KOMISI_LIST = ["Komisi I", "Komisi II", "Komisi III", "Komisi IV", "Komisi V", "Komisi VI", "Komisi VII", "Komisi VIII", "Komisi IX", "Komisi X", "Komisi XI", "Komisi XII", "Komisi XIII"];
 
-function KomisiView({ selected, rest, fields, tanggal, categories }: { selected: Row[], rest: Row[], fields: string[], tanggal?: string | null, categories?: string[] }) {
+function KomisiView({ selected, rest, fields, tanggal, categories }: { selected: Row[], rest: Row[], fields: string[], tanggal?: string | null | undefined, categories?: string[] | undefined }) {
   const availableKomisi = useMemo(() => categories && categories.length > 0 ? categories : KOMISI_LIST, [categories]);
   const [activeKomisi, setActiveKomisi] = useState<string>(availableKomisi[0] || "Komisi I");
 
@@ -295,7 +295,7 @@ function KomisiView({ selected, rest, fields, tanggal, categories }: { selected:
 // ==========================================
 // 3. VIEW UNTUK NASIONAL (Card Grid)
 // ==========================================
-function NasionalView({ selected, rest, fields, tanggal, categories, sourceName }: { selected: Row[], rest: Row[], fields: string[], tanggal?: string | null, categories?: string[], sourceName?: string }) {
+function NasionalView({ selected, rest, fields, tanggal, categories, sourceName }: { selected: Row[], rest: Row[], fields: string[], tanggal?: string | null | undefined, categories?: string[] | undefined, sourceName?: string | undefined }) {
   return (
     <div className="space-y-6">
       <header className="border-b border-border pb-4">
@@ -350,9 +350,9 @@ export function SourceOutputPreview({
 }: {
   rows: Row[];
   fields: string[];
-  tanggal?: string | null;
-  categories?: string[];
-  sourceName?: string;
+  tanggal?: string | null | undefined;
+  categories?: string[] | undefined;
+  sourceName?: string | undefined;
 }) {
   const { selected, rest } = useMemo(() => {
     const sel = rows.filter(isSelected);
@@ -391,8 +391,8 @@ export function OutputPreview({
 }: {
   rows: Row[];
   fields: string[];
-  tanggal?: string | null;
-  categories?: string[];
+  tanggal?: string | null | undefined;
+  categories?: string[] | undefined;
 }) {
   return <SourceOutputPreview rows={rows} fields={fields} tanggal={tanggal} categories={categories} />;
 }
