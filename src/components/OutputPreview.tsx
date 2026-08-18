@@ -7,7 +7,7 @@ import { ResultTable, type Row } from "@/components/ResultTable";
 
 // --- HELPER FUNCTIONS ---
 
-function pick(row: Row, candidates: string[]): string {
+export function pick(row: Row, candidates: string[]): string {
   for (const key of candidates) {
     const v = row[key];
     if (v !== undefined && v !== null && String(v).trim() !== "") return String(v);
@@ -15,18 +15,18 @@ function pick(row: Row, candidates: string[]): string {
   return "";
 }
 
-function isSelected(row: Row): boolean {
+export function isSelected(row: Row): boolean {
   const v = pick(row, ["status_seleksi", "status_detail", "status", "seleksi"]).toLowerCase();
   return v.includes("selected") || v.includes("terpilih");
 }
 
 // Komponen teks yang bisa di-expand (Selengkapnya / Lebih sedikit)
-function ExpandableText({ text }: { text: string }) {
+export function ExpandableText({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(false);
   if (!text) return <span className="text-muted-foreground">—</span>;
-  
+
   const isLong = text.length > 80;
-  
+
   return (
     <div className="space-y-1">
       <p className={`text-xs leading-relaxed text-muted-foreground ${!expanded && isLong ? "line-clamp-2" : ""}`}>
@@ -37,14 +37,13 @@ function ExpandableText({ text }: { text: string }) {
           onClick={() => setExpanded(!expanded)}
           className="text-[10px] text-primary flex items-center gap-1 font-medium hover:underline"
         >
-          {expanded ? "Lebih sedikit" : "Selengkapnya"} 
+          {expanded ? "Lebih sedikit" : "Selengkapnya"}
           <ChevronDown className={`size-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
         </button>
       )}
     </div>
   );
 }
-
 
 // ==========================================
 // 1. VIEW UNTUK DAPIL (Tabel Grouping Nested)
@@ -56,24 +55,24 @@ function DapilView({ selected, rest, fields, tanggal }: { selected: Row[], rest:
   // Grouping data berdasarkan Dapil & Anggota
   const groupedData = useMemo(() => {
     const map = new Map<string, { dapil: string, anggota: string, wilayah: string, news: Row[] }>();
-    
+
     selected.forEach(row => {
       const dapil = pick(row, ["dapil", "nama_dapil", "daerah_pemilihan"]) || "Dapil Tidak Diketahui";
       const anggota = pick(row, ["anggota", "nama_anggota", "tokoh"]) || "—";
       const wilayah = pick(row, ["kabupaten", "kota", "kabupaten_kota", "wilayah"]) || "—";
-      
+
       const key = `${dapil}-${anggota}`;
       if (!map.has(key)) {
         map.set(key, { dapil, anggota, wilayah, news: [] });
       }
       map.get(key)!.news.push(row);
     });
-    
+
     return Array.from(map.values());
   }, [selected]);
 
   // Filter hasil grouping berdasarkan input pencarian
-  const filteredData = groupedData.filter(g => 
+  const filteredData = groupedData.filter(g =>
     g.dapil.toLowerCase().includes(searchDapil.toLowerCase()) &&
     g.anggota.toLowerCase().includes(searchAnggota.toLowerCase())
   );
@@ -94,8 +93,8 @@ function DapilView({ selected, rest, fields, tanggal }: { selected: Row[], rest:
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input 
-            placeholder="Filter nama dapil..." 
+          <Input
+            placeholder="Filter nama dapil..."
             className="pl-9 bg-card"
             value={searchDapil}
             onChange={(e) => setSearchDapil(e.target.value)}
@@ -103,15 +102,15 @@ function DapilView({ selected, rest, fields, tanggal }: { selected: Row[], rest:
         </div>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input 
-            placeholder="Filter nama anggota..." 
+          <Input
+            placeholder="Filter nama anggota..."
             className="pl-9 bg-card"
             value={searchAnggota}
             onChange={(e) => setSearchAnggota(e.target.value)}
           />
         </div>
       </div>
-      
+
       <p className="text-xs text-right text-muted-foreground font-medium">{filteredData.length} dapil ditampilkan</p>
 
       {/* Tabel Utama Dapil */}
@@ -155,7 +154,7 @@ function DapilView({ selected, rest, fields, tanggal }: { selected: Row[], rest:
                           const kotaBerita = pick(news, ["kota", "kabupaten", "lokasi", "tempat"]);
                           const alasan = pick(news, ["alasan_pemilihan", "alasan", "catatan", "ringkasan"]);
                           const url = pick(news, ["url", "link"]);
-                          
+
                           return (
                             <tr key={idx} className="hover:bg-secondary/30 transition-colors">
                               <td className="px-4 py-3">
@@ -280,7 +279,7 @@ function KomisiView({ selected, rest, fields, tanggal, categories }: { selected:
             </div>
           )}
         </div>
-        
+
         {filteredRest.length > 0 && (
           <div className="space-y-3 pt-4">
             <h3 className="font-display text-lg font-semibold">Berita Tidak Terpilih ({filteredRest.length})</h3>
@@ -294,41 +293,9 @@ function KomisiView({ selected, rest, fields, tanggal, categories }: { selected:
 
 
 // ==========================================
-// 3. KOMPONEN UTAMA (Auto-Detector)
+// 3. VIEW UNTUK NASIONAL (Card Grid)
 // ==========================================
-export function OutputPreview({
-  rows,
-  fields,
-  tanggal,
-  categories,
-}: {
-  rows: Row[];
-  fields: string[];
-  tanggal?: string | null;
-  categories?: string[];
-}) {
-  const { selected, rest } = useMemo(() => {
-    const sel = rows.filter(isSelected);
-    // Urutkan default by peringkat kalau ada
-    sel.sort((a, b) => Number(a["peringkat"] ?? 999) - Number(b["peringkat"] ?? 999));
-    return { selected: sel, rest: rows.filter((r) => !isSelected(r)) };
-  }, [rows]);
-
-  // AUTO-DETECT STRUKTUR DATA
-  const isDapilData = useMemo(() => selected.some(r => pick(r, ["dapil", "nama_dapil", "daerah_pemilihan"])), [selected]);
-  const isKomisiData = useMemo(() => selected.some(r => pick(r, ["komisi", "nama_komisi"])), [selected]);
-
-  // Jika terdeteksi Dapil, render tabel Dapil (Desain Gambar 2)
-  if (isDapilData) {
-    return <DapilView selected={selected} rest={rest} fields={fields} tanggal={tanggal} />;
-  }
-  
-  // Jika terdeteksi Komisi, render sidebar Komisi (Desain Gambar 1)
-  if (isKomisiData) {
-    return <KomisiView selected={selected} rest={rest} fields={fields} tanggal={tanggal} categories={categories} />;
-  }
-
-  // Jika tidak keduanya (Data Nasional/Standar), render Card standar
+function NasionalView({ selected, rest, fields, tanggal, categories, sourceName }: { selected: Row[], rest: Row[], fields: string[], tanggal?: string | null, categories?: string[], sourceName?: string }) {
   return (
     <div className="space-y-6">
       <header className="border-b border-border pb-4">
@@ -338,6 +305,7 @@ export function OutputPreview({
         <h2 className="font-display text-2xl font-bold text-primary">
           {categories?.length ? categories.join(" · ") : "Hasil Output Nasional"}
         </h2>
+        {sourceName && <p className="text-sm text-muted-foreground mt-1">{sourceName}</p>}
       </header>
 
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -368,3 +336,64 @@ export function OutputPreview({
     </div>
   );
 }
+
+
+// ==========================================
+// 4. KOMPONEN RENDER PER SUMBER
+// ==========================================
+export function SourceOutputPreview({
+  rows,
+  fields,
+  tanggal,
+  categories,
+  sourceName,
+}: {
+  rows: Row[];
+  fields: string[];
+  tanggal?: string | null;
+  categories?: string[];
+  sourceName?: string;
+}) {
+  const { selected, rest } = useMemo(() => {
+    const sel = rows.filter(isSelected);
+    // Urutkan default by peringkat kalau ada
+    sel.sort((a, b) => Number(a["peringkat"] ?? 999) - Number(b["peringkat"] ?? 999));
+    return { selected: sel, rest: rows.filter((r) => !isSelected(r)) };
+  }, [rows]);
+
+  // AUTO-DETECT STRUKTUR DATA
+  const isDapilData = useMemo(() => selected.some(r => pick(r, ["dapil", "nama_dapil", "daerah_pemilihan"])), [selected]);
+  const isKomisiData = useMemo(() => selected.some(r => pick(r, ["komisi", "nama_komisi"])), [selected]);
+
+  // Jika terdeteksi Dapil, render tabel Dapil (Desain Gambar 2)
+  if (isDapilData) {
+    return <DapilView selected={selected} rest={rest} fields={fields} tanggal={tanggal} />;
+  }
+
+  // Jika terdeteksi Komisi, render sidebar Komisi (Desain Gambar 1)
+  if (isKomisiData) {
+    return <KomisiView selected={selected} rest={rest} fields={fields} tanggal={tanggal} categories={categories} />;
+  }
+
+  // Jika tidak keduanya (Data Nasional/Standar), render Card standar
+  return <NasionalView selected={selected} rest={rest} fields={fields} tanggal={tanggal} categories={categories} sourceName={sourceName} />;
+}
+
+
+// ==========================================
+// 5. KOMPONEN UTAMA (Multi-sumber / Single)
+// ==========================================
+export function OutputPreview({
+  rows,
+  fields,
+  tanggal,
+  categories,
+}: {
+  rows: Row[];
+  fields: string[];
+  tanggal?: string | null;
+  categories?: string[];
+}) {
+  return <SourceOutputPreview rows={rows} fields={fields} tanggal={tanggal} categories={categories} />;
+}
+
