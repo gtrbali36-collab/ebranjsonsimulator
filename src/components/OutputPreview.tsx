@@ -16,8 +16,16 @@ export function pick(row: Row, candidates: string[]): string {
 }
 
 export function isSelected(row: Row): boolean {
+  // 1. Cek apakah record memiliki field "peringkat" dan tidak kosong
+  const p = row["peringkat"];
+  const hasPeringkat = p !== undefined && p !== null && String(p).trim() !== "";
+
+  // 2. Cek status bawaan (seperti sebelumnya)
   const v = pick(row, ["status_seleksi", "status_detail", "status", "seleksi"]).toLowerCase();
-  return v.includes("selected") || v.includes("terpilih");
+  const isStatusSelected = v.includes("selected") || v.includes("terpilih");
+
+  // HANYA masuk ke Berita Terpilih jika data memiliki status terpilih DAN memiliki peringkat
+  return isStatusSelected && hasPeringkat;
 }
 
 // Komponen teks yang bisa di-expand (Selengkapnya / Lebih sedikit)
@@ -396,4 +404,3 @@ export function OutputPreview({
 }) {
   return <SourceOutputPreview rows={rows} fields={fields} tanggal={tanggal} categories={categories} />;
 }
-
